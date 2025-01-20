@@ -21,8 +21,8 @@ command -v python3 >/dev/null 2>&1 || error_exit "Python3 is required but not in
 #fi
 
 # 激活虚拟环境
-echo -e "${GREEN}Activating virtual environment...${NC}"
-source venv/bin/activate || error_exit "Failed to activate virtual environment"
+#echo -e "${GREEN}Activating virtual environment...${NC}"
+#source venv/bin/activate || error_exit "Failed to activate virtual environment"
 
 # 检查并安装依赖
 if [ -f "requirements.txt" ]; then
