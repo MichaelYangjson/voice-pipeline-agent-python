@@ -15,7 +15,7 @@ error_exit() {
 command -v python3 >/dev/null 2>&1 || error_exit "Python3 is required but not installed."
 
 # 检查虚拟环境是否存在
-if [ ! -d "venv" ]; then
+if [ ! -d "voice" ]; then
     echo -e "${GREEN}Creating virtual environment...${NC}"
     python3 -m venv venv || error_exit "Failed to create virtual environment"
 fi
