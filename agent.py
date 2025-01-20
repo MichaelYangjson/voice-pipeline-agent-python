@@ -10,7 +10,7 @@ from livekit.agents import (
     llm,
 )
 from livekit.agents.pipeline import VoicePipelineAgent
-from livekit.plugins import openai, deepgram, silero
+from livekit.plugins import silero, deepgram, anthropic, openai
 
 load_dotenv(dotenv_path=".env.local")
 logger = logging.getLogger("voice-agent")
@@ -24,8 +24,8 @@ from livekit.plugins.cartesia import tts
 
 cartesia_tts = tts.TTS(
     model="sonic-english",
-    voice="c2ac25f9-ecc4-4f56-9095-651354df60c0",
-    speed=0.8,
+    voice="694f9389-aac1-45b6-b726-9d9369183238",
+    speed="slow",
     emotion=["curiosity:highest", "positivity:high"]
 )
 
@@ -52,8 +52,10 @@ async def entrypoint(ctx: JobContext):
         vad=ctx.proc.userdata["vad"],
         stt=deepgram.STT(),
         llm=openai.LLM(model="gpt-4o-mini", base_url="https://api.zhizengzeng.com/v1"),
-        tts=deepgram.TTS(),
+        tts=cartesia_tts,
         chat_ctx=initial_ctx,
+        allow_interruptions=True,
+
     )
 
     agent.start(ctx.room, participant)
