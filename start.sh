@@ -44,7 +44,7 @@ fi
 
 # 运行应用
 echo -e "${GREEN}Starting the agent...${NC}"
-python agent.py 2>&1 | tee logs/agent_$(date +%Y%m%d_%H%M%S).log
+python agent.py dev 2>&1 | tee logs/agent_$(date +%Y%m%d_%H%M%S).log
 
 # 捕获退出信号
 cleanup() {
