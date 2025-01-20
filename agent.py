@@ -54,7 +54,7 @@ async def entrypoint(ctx: JobContext):
         llm=openai.LLM(model="gpt-4o-mini", base_url="https://api.zhizengzeng.com/v1"),
         tts=cartesia_tts,
         chat_ctx=initial_ctx,
-        allow_interruptions=True,
+        # allow_interruptions=True,
 
     )
 
