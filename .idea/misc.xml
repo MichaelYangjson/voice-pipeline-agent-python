@@ -3,5 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="voice-pipeline" />
   </component>
-  <component name="ProjectRootManager" version="2" project-jdk-name="agents" project-jdk-type="Python SDK" />
+  <component name="ProjectRootManager" version="2" project-jdk-name="voice-pipeline02" project-jdk-type="Python SDK" />
 </project>
