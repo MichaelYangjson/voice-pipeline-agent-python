@@ -194,6 +194,9 @@ def setup_metrics_collector(agent, ctx, api_key):
     usage_collector = metrics.UsageCollector()
     supabase_client = SupabaseClient()
 
+    # 生成会话 ID
+    session_id = f"session_{ctx.room.name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
     @agent.on("metrics_collected")
     def _on_metrics_collected(mtrcs: metrics.AgentMetrics):
         # 记录指标
@@ -222,7 +225,7 @@ def setup_metrics_collector(agent, ctx, api_key):
                 usage_amount=1,
                 cost=total_cost,
                 model='all',
-                request_id=ctx.job_id,
+                request_id=session_id,  # 使用生成的会话 ID
                 status='completed',
                 error_message=None
             )
@@ -235,7 +238,7 @@ def setup_metrics_collector(agent, ctx, api_key):
                 usage_amount=summary.llm_prompt_tokens + summary.llm_completion_tokens,
                 cost=llm_cost,
                 model=settings.LLM_CONFIG.get('model', 'gpt-3.5-turbo'),
-                request_id=ctx.job_id,
+                request_id=session_id,  # 使用生成的会话 ID
                 status='completed'
             )
 
@@ -246,7 +249,7 @@ def setup_metrics_collector(agent, ctx, api_key):
                 usage_amount=summary.tts_characters_count,
                 cost=tts_cost,
                 model=settings.TTS_CONFIG.get('model', 'default'),
-                request_id=ctx.job_id,
+                request_id=session_id,  # 使用生成的会话 ID
                 status='completed'
             )
 
@@ -257,13 +260,13 @@ def setup_metrics_collector(agent, ctx, api_key):
                 usage_amount=summary.stt_audio_duration,
                 cost=stt_cost,
                 model='deepgram',
-                request_id=ctx.job_id,
+                request_id=session_id,  # 使用生成的会话 ID
                 status='completed'
             )
 
             # 记录详细的使用统计到日志
             logger.info(
-                f"\nSession Usage Summary:"
+                f"\nSession Usage Summary (ID: {session_id}):"
                 f"\n------------------------"
                 f"\nLLM Usage:"
                 f"\n  - Prompt Tokens: {summary.llm_prompt_tokens:,}"
@@ -293,10 +296,11 @@ def setup_metrics_collector(agent, ctx, api_key):
                 usage_amount=0,
                 cost=0,
                 model='all',
-                request_id=ctx.job_id,
+                request_id=session_id,  # 使用生成的会话 ID
                 status='error',
                 error_message=str(e)
             )
+
     # 添加关闭回调
     ctx.add_shutdown_callback(log_session_cost)
 
