@@ -62,4 +62,9 @@ class Settings:
     LOG_FORMAT: str = os.getenv("LOG_FORMAT", "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     LOG_FILE: str = os.getenv("LOG_FILE", "agent.log")
 
+    # 会话控制配置
+    PARTICIPANT_WAIT_TIMEOUT = 300  # 等待参与者加入的超时时间（秒）
+    MAX_SESSION_DURATION = 3600     # 最大会话时长（秒），None 表示无限制
+    ROOM_IDLE_TIMEOUT = 300        # 房间空闲超时时间（秒）
+
 settings = Settings()
