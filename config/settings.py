@@ -23,16 +23,16 @@ class Settings:
     }
 
     # TTS配置
-    # TTS_CONFIG: Dict = {
-    #     "model": "sonic-english",
-    #     "voice": "694f9389-aac1-45b6-b726-9d9369183238",
-    #     "speed": "slow",
-    #     "emotion": ["curiosity:highest", "positivity:high"]
-    # }
-
     TTS_CONFIG: Dict = {
-        "model": "aura-athena-en",
+        "model": "sonic-english",
+        "voice": "694f9389-aac1-45b6-b726-9d9369183238",
+        "speed": "slow",
+        "emotion": ["curiosity:highest", "positivity:high"]
     }
+
+    # TTS_CONFIG: Dict = {
+    #     "model": "aura-athena-en",
+    # }
 
     # LLM配置
     LLM_CONFIG: Dict = {
