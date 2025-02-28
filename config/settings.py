@@ -71,4 +71,11 @@ class Settings:
     MAX_SESSION_DURATION = 3600     # 最大会话时长（秒），None 表示无限制
     ROOM_IDLE_TIMEOUT = 300        # 房间空闲超时时间（秒）
 
+        # 录制配置
+    GCP_CREDENTIALS_PATH = "/path/to/credentials.json"
+    RECORDING_BUCKET = "your-bucket-name"
+    
+    # 对话记录配置
+    CONVERSATION_DIR = "conversations"
+
 settings = Settings()

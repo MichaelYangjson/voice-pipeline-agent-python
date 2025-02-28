@@ -308,45 +308,70 @@ def setup_metrics_collector(agent, ctx, api_key):
 async def entrypoint(ctx: JobContext):
     """主入口函数"""
     try:
-        initial_ctx = llm.ChatContext().append(
-            role="system",
-            text=SYSTEM_PROMPT
+        # 1. 设置音频录制
+        # 获取 GCP 凭证
+        file_contents = ""
+        with open(settings.GCP_CREDENTIALS_PATH, "r") as f:
+            file_contents = f.read()
+
+        # 创建录制请求
+        req = api.RoomCompositeEgressRequest(
+            room_name=ctx.room.name,
+            layout="speaker",
+            audio_only=True,  # 只录制音频
+            segment_outputs=[api.SegmentedFileOutput(
+                filename_prefix=f"audio_{ctx.room.name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                playlist_name="playlist.m3u8",
+                live_playlist_name="live_playlist.m3u8",
+                segment_duration=5,
+                gcp=api.GCPUpload(
+                    credentials=file_contents,
+                    bucket=settings.RECORDING_BUCKET,
+                ),
+            )],
         )
 
-        # 1. 设置房间监听器
+        # 开始录制
+        lkapi = api.LiveKitAPI(
+            url=settings.LIVEKIT_URL,
+            api_key=settings.LIVEKIT_API_KEY,
+            api_secret=settings.LIVEKIT_API_SECRET
+        )
+        res = await lkapi.egress.start_room_composite_egress(req)
+        logger.info(f"Started audio recording with egress ID: {res.egress_id}")
+
+        # 2. 设置房间监听器
         @ctx.room.on("participant_disconnected")
         def on_participant_disconnected(participant: rtc.Participant):
             logger.info(f"Participant {participant.identity} disconnected")
-            if len(ctx.room.remote_participants) == 0:
+            if len(ctx.room.participants) == 0:
                 logger.info("All participants left, initiating shutdown")
                 asyncio.create_task(ctx.shutdown(reason="All participants left"))
 
         @ctx.room.on("disconnected")
         def on_disconnected():
             logger.info(f"Room {ctx.room.name} disconnected")
-            asyncio.create_task(ctx.shutdown(reason="Room disconnected"))
+            ctx.shutdown(reason="Room disconnected")
 
-        # 2. 连接到房间
+        # 3. 连接到房间
         logger.info(f"Connecting to room {ctx.room.name}")
         await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
-        # 3. 等待参与者加入
+        # 4. 等待参与者加入
         participant = await ctx.wait_for_participant()
         logger.info(f"Starting voice assistant for participant {participant.identity}")
 
-        # 4. 从 settings 获取 API key
-        api_key = settings.LIVEKIT_API_KEY
-        if not api_key:
-            logger.error("No API key found in settings")
-            ctx.shutdown(reason="Missing API key")
-            return
-
         # 5. 初始化 agent
+        initial_ctx = llm.ChatContext().append(
+            role="system",
+            text=(
+                "You are a voice assistant created by LiveKit. Your interface with users will be voice. "
+                "You should use short and concise responses, and avoiding usage of unpronouncable punctuation. "
+                "You were created as a demo to showcase the capabilities of LiveKit's agents framework."
+            ),
+        )
+
         agent = VoicePipelineAgent(
-            allow_interruptions=True,
-            interrupt_speech_duration=0.8,
-            interrupt_min_words=1,
-            min_endpointing_delay=0.5,
             vad=ctx.proc.userdata["vad"],
             stt=deepgram.STT(api_key=settings.DEEPGRAM_API_KEY),
             llm=openai.LLM(**settings.LLM_CONFIG),
@@ -354,44 +379,53 @@ async def entrypoint(ctx: JobContext):
             chat_ctx=initial_ctx,
         )
 
-        # 6. 设置指标收集器
-        setup_metrics_collector(agent, ctx, api_key)
+        # 6. 设置对话记录
+        conversation_log = []
+
+        @agent.on("user_speech_committed")
+        def on_user_speech(text: str):
+            conversation_log.append({"role": "user", "text": text})
+            logger.info(f"User: {text}")
+
+        @agent.on("agent_stopped_speaking")
+        def on_agent_speech(text: str):
+            conversation_log.append({"role": "assistant", "text": text})
+            logger.info(f"Assistant: {text}")
 
         # 7. 设置清理回调
         async def cleanup():
             try:
-                # 停止 agent
+                # 停止录制
+                await lkapi.egress.stop_egress(api.StopEgressRequest(
+                    egress_id=res.egress_id
+                ))
+                logger.info("Audio recording stopped")
 
-                # await agent.say("Goodbye, ending the session now.", allow_interruptions=False)
-                await agent.aclose()
-
-                # 删除房间（可选，取决于你的需求）
-                # if settings.DELETE_ROOM_ON_SHUTDOWN:
-                #     api_client = api.LiveKitAPI(
-                #         settings.LIVEKIT_URL,
-                #         settings.LIVEKIT_API_KEY,
-                #         settings.LIVEKIT_API_SECRET,
-                #     )
-                #     try:
-                #         await api_client.room.delete_room(api.DeleteRoomRequest(
-                #             room=ctx.room.name,
-                #         ))
-                #         logger.info(f"Deleted room: {ctx.room.name}")
-                #     except Exception as e:
-                #         logger.error(f"Error deleting room: {str(e)}")
+                # 保存对话记录
+                conversation_file = f"conversations/{ctx.room.name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+                os.makedirs(os.path.dirname(conversation_file), exist_ok=True)
+                with open(conversation_file, "w") as f:
+                    for msg in conversation_log:
+                        f.write(f"{msg['role'].title()}: {msg['text']}\n")
+                logger.info(f"Conversation saved to {conversation_file}")
 
             except Exception as e:
                 logger.error(f"Error during cleanup: {str(e)}")
-
-        # 8. 启动 agent
-        agent.start(ctx.room, participant)
-        await agent.say("Hey, what's your name", allow_interruptions=True)
+            finally:
+                await lkapi.aclose()
 
         ctx.add_shutdown_callback(cleanup)
 
+        # 8. 启动 agent
+        agent.start(ctx.room, participant)
+        await agent.say("Hey, how can I help you today?", allow_interruptions=True)
+
+        # 9. 等待会话结束
+        await ctx.wait_until_shutdown()
+
     except Exception as e:
         logger.error(f"Error in entrypoint: {str(e)}")
-        ctx.shutdown(reason=f"Error: {str(e)}")
+        await ctx.shutdown(reason=f"Error: {str(e)}")
         raise
 
 
