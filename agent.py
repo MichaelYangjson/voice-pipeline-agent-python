@@ -309,12 +309,6 @@ async def entrypoint(ctx: JobContext):
     """主入口函数"""
     try:
         # 1. 设置音频录制
-        # 获取 GCP 凭证
-        file_contents = ""
-        with open(settings.GCP_CREDENTIALS_PATH, "r") as f:
-            file_contents = f.read()
-
-        # 创建录制请求
         req = api.RoomCompositeEgressRequest(
             room_name=ctx.room.name,
             layout="speaker",
@@ -324,9 +318,12 @@ async def entrypoint(ctx: JobContext):
                 playlist_name="playlist.m3u8",
                 live_playlist_name="live_playlist.m3u8",
                 segment_duration=5,
-                gcp=api.GCPUpload(
-                    credentials=file_contents,
-                    bucket=settings.RECORDING_BUCKET,
+                alioss=api.AliOSSUpload(  # 使用阿里云 OSS
+                    access_key=settings.ALIOSS_ACCESS_KEY,
+                    secret=settings.ALIOSS_SECRET,
+                    region=settings.ALIOSS_REGION,
+                    endpoint=settings.ALIOSS_ENDPOINT,
+                    bucket=settings.ALIOSS_BUCKET
                 ),
             )],
         )

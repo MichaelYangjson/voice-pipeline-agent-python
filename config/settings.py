@@ -71,9 +71,12 @@ class Settings:
     MAX_SESSION_DURATION = 3600     # 最大会话时长（秒），None 表示无限制
     ROOM_IDLE_TIMEOUT = 300        # 房间空闲超时时间（秒）
 
-        # 录制配置
-    GCP_CREDENTIALS_PATH = "/path/to/credentials.json"
-    RECORDING_BUCKET = "your-bucket-name"
+        # 阿里云 OSS 配置
+    ALIOSS_ACCESS_KEY = os.getenv("ALIOSS_ACCESS_KEY")
+    ALIOSS_SECRET = os.getenv("ALIOSS_SECRET")
+    ALIOSS_REGION = os.getenv("ALIOSS_REGION", "oss-cn-hangzhou")  # 例如：oss-cn-hangzhou
+    ALIOSS_ENDPOINT = os.getenv("ALIOSS_ENDPOINT", "oss-cn-hangzhou.aliyuncs.com")  # 例如：oss-cn-hangzhou.aliyuncs.com
+    ALIOSS_BUCKET = os.getenv("ALIOSS_BUCKET")
     
     # 对话记录配置
     CONVERSATION_DIR = "conversations"
